@@ -185,9 +185,10 @@ class _EventDetailsPopupState extends State<EventDetailsPopup> {
           ),
           SizedBox(height: 16),
           Text(
-            remainingDays > 0
-                ? '$remainingDays d $remainingHours h $remainingMinutes m'
-                : 'Event has passed',
+            remainingTime.inMinutes < 0
+              ?'Event has passed':
+             '$remainingDays d $remainingHours h $remainingMinutes m'
+            ,
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
           ),
           SizedBox(height: 16),
