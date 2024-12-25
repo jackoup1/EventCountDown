@@ -22,24 +22,22 @@ class EventError extends EventState {}
 
 // BLoC Implementation
 class EventBloc extends Bloc<EventEvent, EventState> {
-  EventBloc() : super(EventLoading());
-
-  @override
-  Stream<EventState> mapEventToState(EventEvent event) async* {
-    if (event is LoadEvents) {
-      yield EventLoading();
+  EventBloc() : super(EventLoading()) {
+    // Registering the event handler
+    on<LoadEvents>((event, emit) async {
+      emit(EventLoading());
       try {
         final response = await http.get(Uri.parse('<YOUR_API_ENDPOINT>'));
         if (response.statusCode == 200) {
           final List<dynamic> data = json.decode(response.body);
           final events = data.map((e) => Event.fromJson(e)).toList();
-          yield EventLoaded(events);
+          emit(EventLoaded(events));
         } else {
-          yield EventError();
+          emit(EventError());
         }
       } catch (e) {
-        yield EventError();
+        emit(EventError());
       }
-    }
+    });
   }
 }
