@@ -151,9 +151,11 @@ class _EventDetailsPopupState extends State<EventDetailsPopup> {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final timeElapsed = now.difference(widget.eventTimeCreated).inSeconds;
-    final totalDuration = widget.eventDate.difference(widget.eventTimeCreated).inSeconds;
-    final progress = (timeElapsed / totalDuration).clamp(0.0, 1.0);
+    final timeElapsed = now.difference(widget.eventTimeCreated).inMinutes;
+    final totalDuration = widget.eventDate.difference(widget.eventTimeCreated).inMinutes;
+     var progress = (timeElapsed / totalDuration) ;
+    if(progress > 1)
+      progress =1;
 
     final remainingTime = widget.eventDate.difference(now);
     final remainingDays = remainingTime.inDays;
@@ -172,12 +174,20 @@ class _EventDetailsPopupState extends State<EventDetailsPopup> {
         mainAxisSize: MainAxisSize.min,
         children: [
           CircularPercentIndicator(
+            animation: true,
+            animationDuration: 1000,
             radius: 100.0,
             lineWidth: 12.0,
             percent: progress,
-            center: Text(
-              '${(progress * 100).toInt()}%',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            center: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: progress * 100), // Animate from 0 to progress * 100
+              duration: Duration(milliseconds: 1000), // Match animation duration of the circular bar
+              builder: (context, value, child) {
+                return Text(
+                  '${value.toInt()}%', // Display the animated value as an integer
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                );
+              },
             ),
             progressColor: Colors.deepPurple,
             backgroundColor: Colors.deepPurple.shade200,
