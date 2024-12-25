@@ -9,31 +9,36 @@ class CreateEventScreen extends StatefulWidget {
 class _CreateEventScreenState extends State<CreateEventScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _commentController = TextEditingController(); // For comments
   DateTime? _selectedDate;
   bool _showDateError = false;
 
   Future<void> _saveEvent() async {
-    setState(() {
-      _showDateError = _selectedDate == null; // Update error flag for date
-    });
-
     if (_formKey.currentState!.validate() && _selectedDate != null) {
       final eventName = _nameController.text.trim();
+      final eventComment = _commentController.text.trim(); // Optional
       final eventDate = _selectedDate!;
 
       try {
         await FirebaseFirestore.instance.collection('events').add({
           'name': eventName,
           'date': eventDate.toIso8601String(),
+          'comment': eventComment.isEmpty ? null : eventComment, // Add comment only if not empty
         });
 
-        Navigator.pop(context, true); // Close screen and indicate success
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Event created successfully!')),
+        );
+        Navigator.pop(context, true);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save event: $e')),
         );
       }
     } else {
+      setState(() {
+        _showDateError = _selectedDate == null;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please complete the form')),
       );
@@ -62,7 +67,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 },
               ),
               SizedBox(height: 16),
-              if (_showDateError) // Show only when relevant
+              if (_showDateError || _selectedDate != null)
                 Text(
                   _selectedDate == null
                       ? 'No date selected'
@@ -94,12 +99,18 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                           time.hour,
                           time.minute,
                         );
-                        _showDateError = false; // Clear error flag
+                        _showDateError = false; // Reset error
                       });
                     }
                   }
                 },
                 child: Text('Select Date and Time'),
+              ),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _commentController,
+                decoration: InputDecoration(labelText: 'Event Comments (optional)'),
+                maxLines: 3,
               ),
               SizedBox(height: 16),
               Center(

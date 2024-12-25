@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'create_event_screen.dart'; // Import your CreateEventScreen
+import 'create_event_screen.dart';
 
 class EventListScreen extends StatelessWidget {
   @override
@@ -26,9 +26,11 @@ class EventListScreen extends StatelessWidget {
             final name = data['name'] as String? ?? 'Unnamed Event';
             final date = DateTime.tryParse(data['date'] as String? ?? '') ??
                 DateTime.now();
+            final comment = data['comment'] as String? ?? '';
             return {
               'name': name,
               'date': date,
+              'comment': comment,
             };
           }).toList();
 
@@ -38,6 +40,7 @@ class EventListScreen extends StatelessWidget {
               final event = events[index];
               final name = event['name'] as String;
               final date = event['date'] as DateTime;
+              final comment = event['comment'] as String;
 
               final now = DateTime.now();
               final difference = date.difference(now);
@@ -48,7 +51,7 @@ class EventListScreen extends StatelessWidget {
               return ListTile(
                 title: Text(name),
                 subtitle: Text(
-                  'Date: ${DateFormat.yMMMd().add_jm().format(date)}\nCountdown: $countdown',
+                  'Date: ${DateFormat.yMMMd().add_jm().format(date)}\nCountdown: $countdown\nComment: $comment',
                 ),
               );
             },
@@ -56,16 +59,11 @@ class EventListScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final result = await Navigator.push(
+        onPressed: () {
+          Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => CreateEventScreen()),
           );
-          if (result == true) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Event added successfully!')),
-            );
-          }
         },
         child: Icon(Icons.add),
         tooltip: 'Add Event',
