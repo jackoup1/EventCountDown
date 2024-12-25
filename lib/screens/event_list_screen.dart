@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'create_event_screen.dart';
-
+import 'package:percent_indicator/percent_indicator.dart';
 class EventListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -24,13 +24,15 @@ class EventListScreen extends StatelessWidget {
           final events = snapshot.data!.docs.map((doc) {
             final data = doc.data() as Map<String, dynamic>;
             final name = data['name'] as String? ?? 'Unnamed Event';
-            final date = DateTime.tryParse(data['date'] as String? ?? '') ??
-                DateTime.now();
+            final date = DateTime.tryParse(data['date'] as String? ?? '') ?? DateTime.now();
             final comment = data['comment'] as String? ?? '';
+            final timeCreated = DateTime.tryParse(data['time_created'] as String? ?? '') ?? DateTime.now();
             return {
+              'id': doc.id,
               'name': name,
               'date': date,
               'comment': comment,
+              'timeCreated': timeCreated,
             };
           }).toList();
 
@@ -38,9 +40,11 @@ class EventListScreen extends StatelessWidget {
             itemCount: events.length,
             itemBuilder: (context, index) {
               final event = events[index];
+              final id = event['id'] as String;
               final name = event['name'] as String;
               final date = event['date'] as DateTime;
               final comment = event['comment'] as String;
+              final timeCreated = event['timeCreated'] as DateTime;
 
               final now = DateTime.now();
               final difference = date.difference(now);
@@ -52,6 +56,23 @@ class EventListScreen extends StatelessWidget {
                 title: Text(name),
                 subtitle: Text(
                   'Date: ${DateFormat.yMMMd().add_jm().format(date)}\nCountdown: $countdown\nComment: $comment',
+                ),
+                trailing: ElevatedButton(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return EventDetailsPopup(
+                          eventId: id,
+                          eventName: name,
+                          eventComment: comment,
+                          eventTimeCreated: timeCreated,
+                          eventDate: date,
+                        );
+                      },
+                    );
+                  },
+                  child: Text('Show Details'),
                 ),
               );
             },
@@ -67,6 +88,144 @@ class EventListScreen extends StatelessWidget {
         },
         child: Icon(Icons.add),
         tooltip: 'Add Event',
+      ),
+    );
+  }
+}
+
+class EventDetailsPopup extends StatefulWidget {
+  final String eventId;
+  final String eventName;
+  final String eventComment;
+  final DateTime eventTimeCreated;
+  final DateTime eventDate;
+
+  EventDetailsPopup({
+    required this.eventId,
+    required this.eventName,
+    required this.eventComment,
+    required this.eventTimeCreated,
+    required this.eventDate,
+  });
+
+  @override
+  _EventDetailsPopupState createState() => _EventDetailsPopupState();
+}
+
+class _EventDetailsPopupState extends State<EventDetailsPopup> {
+  late TextEditingController _commentController;
+  bool _isEditing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _commentController = TextEditingController(text: widget.eventComment);
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveComment() async {
+    final updatedComment = _commentController.text.trim();
+
+    try {
+      await FirebaseFirestore.instance.collection('events').doc(widget.eventId).update({
+        'comment': updatedComment.isEmpty ? null : updatedComment,
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Comment updated successfully!')),
+      );
+
+      Navigator.pop(context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update comment: $e')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final timeElapsed = now.difference(widget.eventTimeCreated).inSeconds;
+    final totalDuration = widget.eventDate.difference(widget.eventTimeCreated).inSeconds;
+    final progress = (timeElapsed / totalDuration).clamp(0.0, 1.0);
+
+    final remainingTime = widget.eventDate.difference(now);
+    final remainingDays = remainingTime.inDays;
+    final remainingHours = remainingTime.inHours % 24;
+    final remainingMinutes = remainingTime.inMinutes % 60;
+
+    return AlertDialog(
+      contentPadding: EdgeInsets.all(16),
+      title: Center(
+        child: Text(
+          widget.eventName,
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircularPercentIndicator(
+            radius: 100.0,
+            lineWidth: 12.0,
+            percent: progress,
+            center: Text(
+              '${(progress * 100).toInt()}%',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            progressColor: Colors.deepPurple,
+            backgroundColor: Colors.deepPurple.shade200,
+            circularStrokeCap: CircularStrokeCap.round,
+          ),
+          SizedBox(height: 16),
+          Text(
+            remainingDays > 0
+                ? '$remainingDays d $remainingHours h $remainingMinutes m'
+                : 'Event has passed',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+          ),
+          SizedBox(height: 16),
+          TextField(
+            controller: _commentController,
+            enabled: _isEditing,
+            maxLines: 3,
+            decoration: InputDecoration(
+              labelText: 'Event Comment',
+              hintText: 'Add a comment...',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              ElevatedButton(
+                onPressed: _isEditing ? _saveComment : () {
+                  setState(() {
+                    _isEditing = true;
+                  });
+                },
+                child: Text(_isEditing ? 'Save' : 'Edit Comment'),
+              ),
+              if (_isEditing)
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _isEditing = false;
+                      _commentController.text = widget.eventComment;
+                    });
+                  },
+                  child: Text('Cancel'),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }

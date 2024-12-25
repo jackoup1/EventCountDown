@@ -18,12 +18,14 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       final eventName = _nameController.text.trim();
       final eventComment = _commentController.text.trim(); // Optional
       final eventDate = _selectedDate!;
+      final timeCreated = DateTime.now(); // Capture the time when the event is created
 
       try {
         await FirebaseFirestore.instance.collection('events').add({
           'name': eventName,
           'date': eventDate.toIso8601String(),
           'comment': eventComment.isEmpty ? null : eventComment, // Add comment only if not empty
+          'time_created': timeCreated.toIso8601String(), // Add time_created field
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
