@@ -10,18 +10,16 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   DateTime? _selectedDate;
-  bool _dateError = false;
+  bool _showDateError = false;
 
   Future<void> _saveEvent() async {
     setState(() {
-      _dateError = _selectedDate == null;
+      _showDateError = _selectedDate == null; // Update error flag for date
     });
 
-    if (_formKey.currentState!.validate() && !_dateError) {
+    if (_formKey.currentState!.validate() && _selectedDate != null) {
       final eventName = _nameController.text.trim();
       final eventDate = _selectedDate!;
-
-      print("Saving event: $eventName at $eventDate");
 
       try {
         await FirebaseFirestore.instance.collection('events').add({
@@ -29,16 +27,13 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           'date': eventDate.toIso8601String(),
         });
 
-        print("Event saved successfully!");
-        Navigator.pop(context, true);
+        Navigator.pop(context, true); // Close screen and indicate success
       } catch (e) {
-        print("Error saving event: $e");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save event: $e')),
         );
       }
     } else {
-      print("Form validation failed or date not selected.");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please complete the form')),
       );
@@ -67,14 +62,15 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 },
               ),
               SizedBox(height: 16),
-              Text(
-                _selectedDate == null
-                    ? 'No date selected'
-                    : 'Selected Date: ${_selectedDate.toString()}',
-                style: TextStyle(
-                  color: _dateError ? Colors.red : Colors.black,
+              if (_showDateError) // Show only when relevant
+                Text(
+                  _selectedDate == null
+                      ? 'No date selected'
+                      : 'Selected Date: ${_selectedDate.toString()}',
+                  style: TextStyle(
+                    color: _showDateError ? Colors.red : Colors.black,
+                  ),
                 ),
-              ),
               SizedBox(height: 8),
               ElevatedButton(
                 onPressed: () async {
@@ -98,7 +94,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                           time.hour,
                           time.minute,
                         );
-                        _dateError = false;
+                        _showDateError = false; // Clear error flag
                       });
                     }
                   }
