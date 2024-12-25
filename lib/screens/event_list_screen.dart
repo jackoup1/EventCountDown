@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'create_event_screen.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'login_scren.dart';
 
 
 class EventListScreen extends StatelessWidget {
@@ -18,7 +19,21 @@ class EventListScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text('Event List')),
+        appBar: AppBar(
+          title: Text('Event List'),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.logout),
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => LoginScreen()),
+                );
+              },
+            ),
+          ],
+        ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('events')
