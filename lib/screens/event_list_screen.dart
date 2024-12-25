@@ -3,13 +3,27 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'create_event_screen.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+
 class EventListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text('Event List')),
+        body: Center(child: Text('Please log in to view your events.')),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text('Event List')),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('events').snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('events')
+            .where('user_id', isEqualTo: user.uid) // Filter by the user's ID
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
@@ -24,9 +38,11 @@ class EventListScreen extends StatelessWidget {
           final events = snapshot.data!.docs.map((doc) {
             final data = doc.data() as Map<String, dynamic>;
             final name = data['name'] as String? ?? 'Unnamed Event';
-            final date = DateTime.tryParse(data['date'] as String? ?? '') ?? DateTime.now();
+            final date = DateTime.tryParse(data['date'] as String? ?? '') ??
+                DateTime.now();
             final comment = data['comment'] as String? ?? '';
-            final timeCreated = DateTime.tryParse(data['time_created'] as String? ?? '') ?? DateTime.now();
+            final timeCreated = DateTime.tryParse(
+                data['time_created'] as String? ?? '') ?? DateTime.now();
             return {
               'id': doc.id,
               'name': name,
@@ -50,12 +66,14 @@ class EventListScreen extends StatelessWidget {
               final difference = date.difference(now);
               final countdown = difference.isNegative
                   ? 'Event has passed'
-                  : '${difference.inDays}d ${difference.inHours % 24}h ${difference.inMinutes % 60}m';
+                  : '${difference.inDays}d ${difference.inHours %
+                  24}h ${difference.inMinutes % 60}m';
 
               return ListTile(
                 title: Text(name),
                 subtitle: Text(
-                  'Date: ${DateFormat.yMMMd().add_jm().format(date)}\nCountdown: $countdown\nComment: $comment',
+                  'Date: ${DateFormat.yMMMd().add_jm().format(
+                      date)}\nCountdown: $countdown\nComment: $comment',
                 ),
                 trailing: ElevatedButton(
                   onPressed: () {
@@ -189,8 +207,8 @@ class _EventDetailsPopupState extends State<EventDetailsPopup> {
                 );
               },
             ),
-            progressColor: Colors.deepPurple,
-            backgroundColor: Colors.deepPurple.shade200,
+            progressColor: Colors.cyan,
+            backgroundColor: Colors.white30,
             circularStrokeCap: CircularStrokeCap.round,
           ),
           SizedBox(height: 16),

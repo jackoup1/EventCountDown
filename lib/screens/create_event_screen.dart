@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class CreateEventScreen extends StatefulWidget {
   @override
@@ -19,15 +20,20 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       final eventComment = _commentController.text.trim(); // Optional
       final eventDate = _selectedDate!;
       final timeCreated = DateTime.now(); // Capture the time when the event is created
+      // When creating the event
+      final user = FirebaseAuth.instance.currentUser; // Get the currently logged-in user
 
       try {
-        await FirebaseFirestore.instance.collection('events').add({
-          'name': eventName,
-          'date': eventDate.toIso8601String(),
-          'comment': eventComment.isEmpty ? null : eventComment, // Add comment only if not empty
-          'time_created': timeCreated.toIso8601String(), // Add time_created field
-        });
-
+        if (user != null) {
+          await FirebaseFirestore.instance.collection('events').add({
+            'name': eventName,
+            'date': eventDate.toIso8601String(),
+            'comment': eventComment,
+            'time_created': DateTime.now().toIso8601String(),
+            'user_id': user.uid, // Store the user ID
+            'user_email': user.email, // Optional: Store email for reference
+          });
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Event created successfully!')),
         );
